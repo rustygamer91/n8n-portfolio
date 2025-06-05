@@ -1,0 +1,171 @@
+{
+  "name": "Ada Price Checker",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 60
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3104d5d5-ef7d-4a06-b14f-019b53fed2f2",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.diadata.org/v1/assetQuotation/Cardano/0x0000000000000000000000000000000000000000",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "2089fb44-f33d-4e7b-86ac-0d146f8ea9c0",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b73bbdd0-ea66-4841-bead-82b733ad732d",
+              "leftValue": "={{ $json.Price }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "7b05de20-b5c5-49e8-992f-8e4f379d300e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "-4947875011",
+        "text": "=Price of Ada just went above 1.0 USD. the price is {{ $('HTTP Request').item.json.Price }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        -100
+      ],
+      "id": "962c597b-ec5d-4db0-8076-8eac94f1fa67",
+      "name": "Telegram",
+      "webhookId": "4191bfc6-5677-4dd4-84fa-d82d3aa3aa4c",
+      "credentials": {
+        "telegramApi": {
+          "id": "WN8o1U8OGsM0KxEZ",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-4947875011",
+        "text": "=Price of Ada is below 1 USD. Do not sell. the price is {{ $('HTTP Request').item.json.Price }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        660,
+        180
+      ],
+      "id": "dff5793d-90f5-4b0e-9bb3-4d6608cba033",
+      "name": "Telegram1",
+      "webhookId": "4191bfc6-5677-4dd4-84fa-d82d3aa3aa4c",
+      "credentials": {
+        "telegramApi": {
+          "id": "WN8o1U8OGsM0KxEZ",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5e7eccc0-235e-4d75-87fd-905e99e7a140",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "060541e041e3af658487056794b19f8dc396a8a79d38316e417e26b09c60b186"
+  },
+  "id": "DLzys8KJAU9WP2wc",
+  "tags": []
+}
