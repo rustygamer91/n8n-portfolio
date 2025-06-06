@@ -1,0 +1,370 @@
+{
+  "name": "AIReaderDigest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -220,
+        40
+      ],
+      "id": "00ddc59d-e7b4-479c-b730-b9c2b67501ce",
+      "name": "Daily Scheduler"
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=AI+ecommerce+OR+artificial+intelligence+retail&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "246422a7-9439-4112-b813-47791c59a484",
+      "name": "Google News Feed"
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/search.rss?q=AI+ecommerce+OR+artificial+intelligence+retail&sort=new&t=week&limit=20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        40
+      ],
+      "id": "27bfc5c4-d7dd-4376-b18d-c70eab1fc653",
+      "name": "Reddit RSS Feed"
+    },
+    {
+      "parameters": {
+        "url": "https://hn.algolia.com/api/v1/search?query=AI%20ecommerce%20OR%20artificial%20intelligence%20retail&tags=story&hitsPerPage=15&numericFilters=created_at_i>1717200000",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        240
+      ],
+      "id": "49d522b3-a12a-4c6a-b15b-06e68e23cf01",
+      "name": "HackerNews API"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -120
+      ],
+      "id": "25b5e419-2c50-4847-a190-06333ec27e8f",
+      "name": "Parse Google News"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [
+        220,
+        100
+      ],
+      "id": "e625a8c3-adca-40aa-8aba-752c953ed822",
+      "name": "Parse Reddit RSS"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Google News RSS\nif (items[0].json && items[0].json.rss && items[0].json.rss.channel && items[0].json.rss.channel.item) {\n  const items_data = Array.isArray(items[0].json.rss.channel.item) ? items[0].json.rss.channel.item : [items[0].json.rss.channel.item];\n  \n  const posts = items_data.map(item => ({\n    title: item.title || 'No title',\n    description: item.description || '',\n    link: item.link || '',\n    published: item.pubDate || new Date().toISOString(),\n    source: 'Google News',\n    platform: 'news'\n  }));\n  \n  return posts.map(post => ({json: post}));\n}\n\nreturn [{json: {\n  title: \"No Google News found\",\n  description: \"No recent news items\",\n  link: \"\",\n  published: new Date().toISOString(),\n  source: \"Google News\",\n  platform: \"news\"\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -120
+      ],
+      "id": "bc544da5-1289-4421-b3d6-1dace3a5ad31",
+      "name": "Process Google News"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process Reddit RSS\nif (items[0].json && items[0].json.feed && items[0].json.feed.entry) {\n  const entries = Array.isArray(items[0].json.feed.entry) ? items[0].json.feed.entry : [items[0].json.feed.entry];\n  \n  const posts = entries.map(entry => ({\n    title: entry.title || 'No title',\n    description: entry.content || entry.summary || '',\n    link: entry.link ? (Array.isArray(entry.link) ? entry.link[0].href : entry.link.href) : '',\n    published: entry.updated || entry.published || new Date().toISOString(),\n    source: 'Reddit',\n    platform: 'social',\n    author: entry.author ? entry.author.name : 'Unknown'\n  }));\n  \n  return posts.map(post => ({json: post}));\n}\n\nreturn [{json: {\n  title: \"No Reddit posts found\",\n  description: \"No recent posts\",\n  link: \"\",\n  published: new Date().toISOString(),\n  source: \"Reddit\",\n  platform: \"social\"\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        40
+      ],
+      "id": "5acb5a8c-0013-4c10-a205-0a91001e719d",
+      "name": "Process Reddit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process HackerNews API response\nif (items[0].json && items[0].json.hits) {\n  const posts = items[0].json.hits.map(hit => ({\n    title: hit.title || 'No title',\n    description: hit.story_text || hit.comment_text || '',\n    link: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,\n    published: hit.created_at || new Date().toISOString(),\n    source: 'Hacker News',\n    platform: 'tech',\n    author: hit.author || 'Unknown',\n    points: hit.points || 0,\n    comments: hit.num_comments || 0\n  }));\n  \n  return posts.map(post => ({json: post}));\n}\n\nreturn [{json: {\n  title: \"No HN posts found\",\n  description: \"No recent posts\",\n  link: \"\",\n  published: new Date().toISOString(),\n  source: \"Hacker News\",\n  platform: \"tech\"\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        260
+      ],
+      "id": "1deebb61-2df8-4e0e-a23c-d1dbc5397ee8",
+      "name": "Process HackerNews"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        40
+      ],
+      "id": "f090ee57-a288-4e34-a3f6-d19ce557b58c",
+      "name": "Merge All Sources"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced filtering for RECENT content only (last 7 days)\nconst now = new Date();\nconst oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago\nconst oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago\n\nconsole.log('Filtering for content newer than:', oneWeekAgo.toISOString());\n\n// Filter by recent date AND valid links\nconst filtered = items.filter(item => {\n  const published = new Date(item.json.published);\n  const hasValidLink = item.json.link && item.json.link.startsWith('http');\n  const hasGoodTitle = item.json.title && item.json.title.length > 10;\n  // const isRecent = published >= oneWeekAgo;\n  const isRecent = true;\n  \n  console.log(`Item: ${item.json.title.substring(0, 50)}...`);\n  console.log(`Published: ${published.toISOString()}, Recent: ${isRecent}`);\n  console.log(`Link: ${item.json.link}`);\n  \n  return hasGoodTitle && hasValidLink && isRecent;\n});\n\nconsole.log(`Filtered from ${items.length} to ${filtered.length} recent items`);\n\n// Deduplicate by title similarity\nconst deduplicated = [];\nconst seenTitles = new Set();\n\nfiltered.forEach(item => {\n  const titleKey = item.json.title.toLowerCase().split(' ').slice(0, 5).join(' ');\n  \n  if (!seenTitles.has(titleKey)) {\n    seenTitles.add(titleKey);\n    deduplicated.push(item);\n  }\n});\n\n// Sort by most recent first\nconst sorted = deduplicated.sort((a, b) => {\n  return new Date(b.json.published) - new Date(a.json.published);\n});\n\nconsole.log(`Final items: ${sorted.length}`);\n\n// Return top 5 most recent items\nreturn sorted.slice(0, 5);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        40
+      ],
+      "id": "72417fb6-3a7c-4cee-999c-ecc416fb87c9",
+      "name": "Filter & Dedupe"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-3.5-TURBO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=FORMAT EXACTLY LIKE THIS:\n🔥 **Signal Stack: GenAI × eCommerce** — [Today's Date]\n*Automated digest • Human-verified sources • 2-minute read*\n\n---\n\n{{ $('Filter & Dedupe').all().map(item => `\n**${item.json.title}**\n• Source: ${item.json.source} (${new Date(item.json.published).toLocaleDateString()})\n• ${item.json.description._ ? item.json.description._.replace(/<[^>]*>/g, '').substring(0, 150) + '...' : 'Summary not available'}\n• Read more: ${item.json.link}\n`).join('\\n---\\n') }}\n\n---\n*Subscribe for daily AI insights • Forward to colleagues*",
+              "role": "system"
+            },
+            {
+              "content": "="
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1100,
+        40
+      ],
+      "id": "7565ea58-904d-4077-bd6c-3bafe99fd2ce",
+      "name": "OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "5eXVgOqpER8biHq2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1002588927791",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1500,
+        -60
+      ],
+      "id": "1750ff37-66ad-4772-b006-6c08b107b056",
+      "name": "Telegram",
+      "webhookId": "6abaabb6-b0cb-4c18-974a-4ba4e9756333",
+      "credentials": {
+        "telegramApi": {
+          "id": "x9fMwWdu5qsg7DmQ",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Scheduler": {
+      "main": [
+        [
+          {
+            "node": "Google News Feed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Reddit RSS Feed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HackerNews API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google News Feed": {
+      "main": [
+        [
+          {
+            "node": "Parse Google News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "Parse Reddit RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HackerNews API": {
+      "main": [
+        [
+          {
+            "node": "Process HackerNews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Google News": {
+      "main": [
+        [
+          {
+            "node": "Process Google News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reddit RSS": {
+      "main": [
+        [
+          {
+            "node": "Process Reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Google News": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Reddit": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Sources": {
+      "main": [
+        [
+          {
+            "node": "Filter & Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process HackerNews": {
+      "main": [
+        [
+          {
+            "node": "Merge All Sources",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Filter & Dedupe": {
+      "main": [
+        [
+          {
+            "node": "OpenAI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b59b9a4c-fc09-4454-b640-b634930d8382",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c956acf55900dbecd29376086678842cc7c96e64c6c27f3d1a6f0c893b5ab412"
+  },
+  "id": "5zfjFdiCmL4QljDI",
+  "tags": []
+}
