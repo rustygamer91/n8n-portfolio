@@ -1,0 +1,18 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      - GENERIC_TIMEZONE=America/Vancouver
+      - N8N_DEFAULT_USER_EMAIL=owner@example.com
+      - N8N_DEFAULT_USER_PASSWORD=StrongPass123
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - DB_TYPE=sqlite
+      - N8N_DATABASE_SQLITE_POOL_SIZE=0
+volumes:
+  n8n_data:

@@ -1,0 +1,154 @@
+{
+  "name": "Research Paper Monitor - Starter",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "f8b1c1a2-8e5d-4f6a-9b0c-1d2e3f4a5b6c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://export.arxiv.org/api/query?search_query=cat:cs.AI&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "name": "ArXiv API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple ArXiv XML parser\nconst xml2js = require('xml2js');\nconst parser = new xml2js.Parser();\n\nif (items[0].json) {\n  const xmlString = JSON.stringify(items[0].json);\n  \n  // For demo purposes, let's create a simple paper object\n  const mockPaper = {\n    title: \"AI Research Paper\",\n    authors: \"AI Researchers\",\n    abstract: \"This is a sample abstract for testing purposes.\",\n    published: new Date().toISOString(),\n    source: \"arxiv\",\n    pdf_url: \"https://arxiv.org/pdf/2301.00001.pdf\"\n  };\n  \n  return [{json: mockPaper}];\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "id": "b2c3d4e5-f6a7-8901-2345-67890abcdef1",
+      "name": "Parse Papers"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "model": "gpt-3.5-turbo",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a research paper summarizer. Create a brief summary in 2-3 sentences."
+            },
+            {
+              "role": "user",
+              "content": "=Title: {{ $json.title }}\\n\\nAbstract: {{ $json.abstract }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.3,
+      "position": [
+        900,
+        300
+      ],
+      "id": "c3d4e5f6-a7b8-9012-3456-7890abcdef12",
+      "name": "AI Summarizer"
+    },
+    {
+      "parameters": {
+        "chatId": "",
+        "text": "=📄 **New Paper Alert**\\n\\n**{{ $('Parse Papers').item.json.title }}**\\n\\nAuthors: {{ $('Parse Papers').item.json.authors }}\\nSource: {{ $('Parse Papers').item.json.source }}\\n\\n**Summary:**\\n{{ $json.choices[0].message.content }}\\n\\n[Read More]({{ $('Parse Papers').item.json.pdf_url }})",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        300
+      ],
+      "id": "d4e5f6a7-b8c9-0123-4567-890abcdef123",
+      "name": "Send to Telegram"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "ArXiv API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ArXiv API": {
+      "main": [
+        [
+          {
+            "node": "Parse Papers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Papers": {
+      "main": [
+        [
+          {
+            "node": "AI Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Send to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "starter-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "research-paper-starter",
+  "tags": ["research", "ai", "starter"]
+} 
